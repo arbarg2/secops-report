@@ -1,7 +1,6 @@
+import React, { useState } from "react";
 
-import { useState } from "react";
-
-export default function ReportView() {
+export default function App() {
   const [alerts, setAlerts] = useState([]);
   const [report, setReport] = useState(null);
 
@@ -59,7 +58,7 @@ export default function ReportView() {
 
   return (
     <div className="p-6 max-w-4xl mx-auto">
-      <h1 className="text-2xl font-bold mb-4">SecOps Report Generator</h1>
+      <h1 className="text-2xl font-bold mb-4">SecOps Pulse Report Generator</h1>
       <input type="file" accept=".csv" onChange={handleFileUpload} className="mb-4" />
 
       {report && (
