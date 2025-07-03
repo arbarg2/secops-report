@@ -1,7 +1,9 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 
 export default function IngestionPage() {
   const [ingestionFiles, setIngestionFiles] = useState([]);
+  const navigate = useNavigate();
 
   const addIngestionFile = () => {
     setIngestionFiles([...ingestionFiles, { id: Date.now(), file: null }]);
@@ -16,6 +18,9 @@ export default function IngestionPage() {
   const handleIngest = () => {
     console.log('Ingesting:', ingestionFiles);
     alert('Data ingested (mock). Check console for details.');
+
+    // Navigate to Dashboard after ingest
+    navigate('/dashboard');
   };
 
   return (
