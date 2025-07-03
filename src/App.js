@@ -1,25 +1,96 @@
-import React from 'react';
-import { BrowserRouter as Router, Routes, Route, Link } from 'react-router-dom';
-import IngestionPage from './components/IngestionPage';
-import Dashboard from './components/Dashboard';
+import React, { useEffect, useState } from 'react';
 
-function App() {
+export default function Dashboard({ ingestedData }) {
+  const [report, setReport] = useState(null);
+
+  useEffect(() => {
+    if (ingestedData && ingestedData.length > 0) {
+      const fileData = ingestedData[0].file;  // Take first file for now
+
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        const lines = event.target.result.split("\n").filter(Boolean);
+        const headers = lines[0].split(",");
+        const data = lines.slice(1).map((line) => {
+          const fields = line.split(",");
+          return Object.fromEntries(headers.map((h, i) => [h.trim(), fields[i]?.trim()]));
+        });
+        generateReport(data);
+      };
+      reader.readAsText(fileData);
+    }
+  }, [ingestedData]);
+
+  const generateReport = (data) => {
+    const mttrList = [];
+    let open = 0, resolved = 0, total = 0, falsePositives = 0;
+
+    data.forEach(alert => {
+      total++;
+      const status = alert.status?.toLowerCase();
+      if (status === "resolved") {
+        resolved++;
+        const opened = new Date(alert.opened);
+        const closed = new Date(alert.closed);
+        const duration = (closed - opened) / 3600000;
+        if (!isNaN(duration)) mttrList.push(duration);
+      } else {
+        open++;
+      }
+      if (alert.classification?.toLowerCase() === "false positive") {
+        falsePositives++;
+      }
+    });
+
+    const avgMTTR = mttrList.length ? (mttrList.reduce((a, b) => a + b, 0) / mttrList.length).toFixed(2) : "N/A";
+    const fpRate = ((falsePositives / total) * 100).toFixed(1);
+
+    setReport({
+      total,
+      resolved,
+      open,
+      avgMTTR,
+      falsePositives,
+      fpRate,
+    });
+  };
+
   return (
-    <Router>
-      <div className="p-4 flex justify-between items-center border-b mb-6">
-        <h1 className="text-xl font-bold">SecOps Pulse</h1>
-        <nav className="space-x-4">
-          <Link to="/" className="text-blue-600">Ingestion</Link>
-          <Link to="/dashboard" className="text-blue-600">Dashboard</Link>
-        </nav>
-      </div>
+    <div className="p-6 max-w-4xl mx-auto">
+      <h1 className="text-2xl font-bold mb-4">SecOps Pulse Dashboard</h1>
 
-      <Routes>
-        <Route path="/" element={<IngestionPage />} />
-        <Route path="/dashboard" element={<Dashboard />} />
-      </Routes>
-    </Router>
+      {report ? (
+        <div className="space-y-4">
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+            <Stat label="Total Alerts" value={report.total} />
+            <Stat label="Resolved Cases" value={report.resolved} />
+            <Stat label="Open Cases" value={report.open} />
+            <Stat label="Avg MTTR (hrs)" value={report.avgMTTR} />
+            <Stat label="False Positives" value={report.falsePositives} />
+            <Stat label="False Positive Rate" value={`${report.fpRate}%`} />
+          </div>
+
+          <div className="bg-indigo-50 border-l-4 border-indigo-400 p-4 rounded">
+            <h2 className="text-lg font-semibold mb-1">Summary</h2>
+            <p className="text-sm">
+              Over the reporting period, the SOC handled {report.total} alerts. {report.resolved} were resolved,
+              averaging a Mean Time to Resolution of {report.avgMTTR} hours. {report.fpRate}% were false positives.
+              Focus areas include reducing open case volume and false positive sources.
+            </p>
+          </div>
+        </div>
+      ) : (
+        <p className="text-gray-500">No ingested data available. Please upload files first.</p>
+      )}
+    </div>
   );
 }
 
-export default App;
+function Stat({ label, value }) {
+  return (
+    <div className="bg-gray-100 p-4 rounded text-center shadow-sm">
+      <div className="text-xl font-bold">{value}</div>
+      <div className="text-sm text-gray-600">{label}</div>
+    </div>
+  );
+}
